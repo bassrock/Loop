@@ -727,6 +727,13 @@ private extension DeviceDataManager {
         if let cgmManagerUI = cgmManager as? CGMManagerUI {
             addDisplayGlucoseUnitObserver(cgmManagerUI)
         }
+        
+        if cgmManager?.managerIdentifier == "NightscoutAPIClient" {
+            DeviceDataManager.registerRemoteCGMBackgroundTask({
+                self.handleRemoteCGMBackgroundTask($0)
+            })
+            self.scheduleRemoteCGMBackgroundTask()
+        }
     }
 
     func setupPump() {
@@ -1748,4 +1755,43 @@ extension DeviceDataManager: DeviceStatusProvider {}
 
 extension DeviceDataManager {
     var detectedSystemTimeOffset: TimeInterval { trustedTimeChecker.detectedSystemTimeOffset }
+}
+
+
+extension DeviceDataManager {
+    private static var remoteCGMBackgroundTaskIdentifier: String { "com.loopkit.background-task.remote-cgm.refresh" }
+
+    public static func registerRemoteCGMBackgroundTask(_ handler: @escaping (BGAppRefreshTask) -> Void) -> Bool {
+        return BGTaskScheduler.shared.register(forTaskWithIdentifier: remoteCGMBackgroundTaskIdentifier, using: nil) { handler($0 as! BGAppRefreshTask) }
+    }
+    
+    public func handleRemoteCGMBackgroundTask(_ task: BGAppRefreshTask) {
+        dispatchPrecondition(condition: .notOnQueue(.main))
+        
+        self.log.info("Starting Remote CGM background task")
+
+        DispatchQueue.global(qos: .background).async { [weak self] in
+            guard let self = self else {
+                task.setTaskCompleted(success: false)
+                return
+            }
+            self.refreshCGM() {
+                self.scheduleRemoteCGMBackgroundTask()
+                self.log.info("Finished Remote CGM background task")
+                task.setTaskCompleted(success: true)
+            }
+        }
+    }
+
+    public func scheduleRemoteCGMBackgroundTask() {
+        do {
+            let request = BGAppRefreshTaskRequest(identifier: Self.remoteCGMBackgroundTaskIdentifier)
+            let earliestBeginDate = Date().addingTimeInterval(60)
+            request.earliestBeginDate = earliestBeginDate
+            try BGTaskScheduler.shared.submit(request)
+
+        } catch _ {
+            self.log.error("Could not schedule remote cgm background task")
+        }
+    }
 }
