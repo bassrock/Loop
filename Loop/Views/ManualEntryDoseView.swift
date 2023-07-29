@@ -170,11 +170,12 @@ struct ManualEntryDoseView: View {
     }
     private var datePicker: some View {
         // Allow 6 hours before & after due to longest DIA
+        // Personal Daniel Change.
         ZStack(alignment: .topLeading) {
             DatePicker(
                 "",
                 selection: $viewModel.selectedDoseDate,
-                in: Date().addingTimeInterval(-.hours(6))...Date().addingTimeInterval(.hours(6)),
+                in: Date().addingTimeInterval(-.hours(24))...Date().addingTimeInterval(.hours(24)),
                 displayedComponents: [.date, .hourAndMinute]
             )
             .pickerStyle(WheelPickerStyle())

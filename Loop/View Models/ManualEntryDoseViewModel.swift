@@ -107,14 +107,14 @@ final class ManualEntryDoseViewModel: ObservableObject {
         self.debounceIntervalMilliseconds = debounceIntervalMilliseconds
         self.uuidProvider = uuidProvider
         
-        self.insulinTypePickerOptions = [.novolog, .humalog, .apidra, .fiasp, .lyumjev, .afrezza, .lantus]
-        
+        self.insulinTypePickerOptions = [.humalog, .lantus]
+
         self.chartDateInterval = DateInterval(start: Date(timeInterval: .hours(-1), since: now()), duration: .hours(7))
 
         if let pumpInsulinType = delegate.pumpInsulinType {
             selectedInsulinType = pumpInsulinType
         } else {
-            selectedInsulinType = .novolog
+            selectedInsulinType = .humalog
         }
 
         observeLoopUpdates()
